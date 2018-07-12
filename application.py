@@ -32,6 +32,8 @@ db = scoped_session(sessionmaker(bind=engine))
 @app.route("/")
 def index():
     #return "Project 1: TODO"
+
+    session['found'] = False
     return render_template("home.html")
 
 
@@ -57,11 +59,42 @@ def login():
         {"u": username, "p": password})
     db.commit()
 
-    return str(result.rowcount)
+    session['logged_in'] = True
+    #return str(result.rowcount)
 
-@app.route("/search")
+@app.route("/search", methods=["POST"])
 def search():
-    return render_template("search.html")
+        session["found"] = False
+        if not session['logged_in']:
+            return 'error, please login'
+        else:
+            session["found"] = True
+            search_term = request.form.get("loc_search")
+            query = "SELECT * FROM zips WHERE city LIKE '%"+search_term+"%' OR zip LIKE '%"+search_term+"%'"
+
+            query_results = db.execute(query)
+            db.commit()
+            results = []
+            for row in query_results:
+                results.append(row)
+            print(results)
+            return render_template("home.html", results=results)
+
+@app.route("/location/<zipcode>")
+def location(zipcode):
+    if zipcode == '':
+        return "error"
+    else:
+        query_results = db.execute("SELECT * FROM zips where zip=:z", {"z": zipcode})
+        db.commit()
+
+        results = []
+        for row in query_results:
+            results.append(row)
+
+        results = results[0]
+
+        return render_template("locations.html", results=results)
 
 @app.route("/nav")
 def nav():

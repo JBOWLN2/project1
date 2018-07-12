@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<p>Location results</p>
+
+{% if results %}
+<div>{{results.zip}}</div>
+<div>{{results.city}}</div>
+<div>{{results.state}}</div>
+<div>{{results.lat}}</div>
+<div>{{results.long}}</div>
+<div>{{results.pop}}</div>
+{% endif %}
+
+<!-- put check in form here -->
+
+{% endblock %}
