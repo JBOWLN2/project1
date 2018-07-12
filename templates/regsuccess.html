@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+        <div class="container-fluid">
+            <div class="row">
+                <p>Thanks for registering <span>{{ fname }}</span> for registering! Your username is <b>{{ username }}</b>. Click <a class="nav-link" href="{{ url_for('search') }}"> here </a> to look up a city.</p>
+            </div>
+        </div>
+
+{% endblock %}
+
+    </body>
+</html>
