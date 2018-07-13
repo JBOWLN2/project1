@@ -34,7 +34,7 @@ def index():
     #return "Project 1: TODO"
 
     session['found'] = False
-    return render_template("home.html")
+    return render_template("index.html")
 
 
 @app.route("/register", methods=["GET"])
@@ -78,7 +78,7 @@ def search():
             for row in query_results:
                 results.append(row)
             print(results)
-            return render_template("home.html", results=results)
+            return render_template("index.html", results=results)
 
 @app.route("/location/<zipcode>")
 def location(zipcode):

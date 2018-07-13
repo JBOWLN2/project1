@@ -1,5 +1,11 @@
 {% extends "layout.html" %}
 
+    {% block content %}
 
-{% block content %}
-{% endblock %}
+        {% if session['found'] %}
+            {% for row in results%}
+                <div> <a href="/location/{{row.zip}}">{{row.city}}, {{row.state}} - {{row.zip}}</a></div>
+            {% endfor %}
+        {% endif %}
+
+    {% endblock %}
