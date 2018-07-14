@@ -11,9 +11,6 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 from pprint import pprint
 
-engine = create_engine(os.getenv("DATABASE_URL"))
-db = scoped_session(sessionmaker(bind=engine))
-
 app = Flask(__name__)
 
 # Check for environment variable
@@ -45,10 +42,13 @@ def register():
 
 @app.route("/register", methods=["POST"])
 def post_register():
+    session['logged_in'] = False
+    session['found'] = False
     fname = request.form.get("fname")
     username = request.form.get("username")
     password = request.form.get("password")
-    db.execute("INSERT INTO users (username, password) VALUES (:u, :p)",
+    #the following adds the uname and password to the database and encrypts the pw (source: https://x-team.com/blog/storing-secure-passwords-with-postgresql/)
+    db.execute("INSERT INTO users (username, password) VALUES (:u, crypt(:p, gen_salt('bf')))",
         {"u": username, "p": password})
     db.commit()
     return render_template("regsuccess.html", username=username, fname=fname.capitalize())
@@ -58,13 +58,19 @@ def login():
     session['error'] = ''
     username = request.form.get("username")
     password = request.form.get("password")
-    result = db.execute("SELECT FROM users WHERE username=:u AND password=:p",
+    result = db.execute("SELECT * FROM users WHERE username=:u AND password=crypt(:p, password);",
         {"u": username, "p": password})
     db.commit()
-    session['logged_in'] = True
-    session['username'] = username
-    return render_template("index.html")
-    #return str(result.rowcount)
+    if(result.rowcount == 0):
+        #session['error'] = "Username and/or password is incorrect"
+        return render_template("loginfail.html")
+    else:
+        res = result.fetchone()
+        session['user_id'] = res.id
+        session['logged_in'] = True
+        session['username'] = username
+        return render_template("index.html")
+        #return str(result.rowcount)
 
 @app.route("/search", methods=["POST"])
 def search():
@@ -87,7 +93,7 @@ def search():
             if not results:
                 session['search_error'] = 'No results found'
                 return render_template("index.html")
-            print(results)
+            #print(results)
             return render_template("index.html", results=results)
 
 @app.route("/location/<zipcode>")
@@ -112,9 +118,16 @@ def location(zipcode):
         data['long'] = results['long']
         data['population'] = results['pop']
         data['checkcount'] = results['checkcount']
+        data['id'] = results['id']
 
-        checkin_query_results = db.execute("SELECT * FROM checkins where userid=:u and loc=:z", {"u": session['username'], "z": zipcode})
+        checkin_query_results = db.execute("SELECT * FROM checkins WHERE loc=:z", {"z": results['id']})
+        checkin_query_newuser = db.execute("SELECT * FROM checkins WHERE loc=:z AND userid=:u", {"z": results['id'], "u": session['user_id']})
         db.commit()
+        if(checkin_query_newuser.rowcount >= 1):
+            show_checkin_form = False
+        else:
+            show_checkin_form = True
+
         checkin_results = []
         for row in checkin_query_results:
             checkin_results.append(row)
@@ -122,21 +135,23 @@ def location(zipcode):
         if not checkin_results:
             data['comment'] = ''
         else:
-            checkin_results = checkin_results[0]
-            data['comment'] = checkin_results['comnts']
-        return render_template("locations.html", results=data)
+            #checkin_results = checkin_results[0]
+            #data['comment'] = checkin_results['comnts']
+            data['comments'] = checkin_results
+        return render_template("locations.html", results=data, show_checkin_form=show_checkin_form)
 
 @app.route("/comment", methods=["POST"])
 def comment():
     comment = request.form['comment']
-    zipcode = request.form['zipcode']
+    locid = request.form['id']
 
-    location_query = db.execute("UPDATE zips SET checkcount=checkcount+1 where zip=:z", {"z": zipcode})
+    location_query = db.execute("UPDATE zips SET checkcount=checkcount+1 where id=:z", {"z": locid})
     db.commit()
 
-    comment_query = db.execute("INSERT INTO checkins(userid, loc, comnts) VALUES(:u, :l, :c)", {"u": session['username'], "l": zipcode, "c": comment})
+    comment_query = db.execute("INSERT INTO checkins(userid, loc, comnts) VALUES(:u, :l, :c)", {"u": session['user_id'], "l": locid, "c": comment})
     db.commit()
-    return redirect(url_for("location", zipcode=zipcode))
+    return redirect(request.referrer)
+
 @app.route("/api/<zipcode>")
 def api(zipcode):
     if 'zipcode' == '':
@@ -167,8 +182,3 @@ def logout():
     session['logged_in'] = False
     session['username'] = ''
     return redirect(url_for("index"))
-
-
-@app.route("/nav")
-def nav():
-    return render_template("nav.html")
