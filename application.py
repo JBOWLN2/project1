@@ -58,13 +58,13 @@ def login():
     result = db.execute("SELECT FROM users WHERE username=:u AND password=:p",
         {"u": username, "p": password})
     db.commit()
-
     session['logged_in'] = True
+    return render_template("index.html")
     #return str(result.rowcount)
 
 @app.route("/search", methods=["POST"])
 def search():
-        session["found"] = False
+        #session["found"] = False
         if not session['logged_in']:
             return 'error, please login'
         else:

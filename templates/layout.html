@@ -17,10 +17,10 @@
                             <a class="nav-item nav-link" href="{{ url_for('register') }}">Register</a>
                         </div>
                         <form class="form-inline" method="POST" action="/search" class="form-inline my-2 my-lg-0">
-                            {% if session['logged_in'] %}
+                            <!-- {% if session['logged_in'] %} -->
                             <input name="loc_search" class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
                             <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-                            {% endif %}
+                            <!-- {% endif %}  -->
                         </form>
                         <form class="form-inline" action="{{ url_for('login') }}" method="post">
                             <span>Sign In</span>
