@@ -1,6 +1,7 @@
 import os
-
-from flask import Flask, session, render_template, request
+import json
+import requests
+from flask import Flask, session, render_template, request, redirect, url_for, jsonify, abort
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -32,7 +33,8 @@ db = scoped_session(sessionmaker(bind=engine))
 @app.route("/")
 def index():
     #return "Project 1: TODO"
-
+    if 'logged_in' not in session:
+        session['logged_in'] = False
     session['found'] = False
     return render_template("index.html")
 
@@ -53,30 +55,38 @@ def post_register():
 
 @app.route("/login", methods=["POST"])
 def login():
+    session['error'] = ''
     username = request.form.get("username")
     password = request.form.get("password")
     result = db.execute("SELECT FROM users WHERE username=:u AND password=:p",
         {"u": username, "p": password})
     db.commit()
     session['logged_in'] = True
+    session['username'] = username
     return render_template("index.html")
     #return str(result.rowcount)
 
 @app.route("/search", methods=["POST"])
 def search():
-        #session["found"] = False
+        session["found"] = False
+        session['search_error'] = ''
+        session['error'] = ''
         if not session['logged_in']:
-            return 'error, please login'
+            session["error"] = "Please login to search"
+            return render_template("index.html")
         else:
             session["found"] = True
             search_term = request.form.get("loc_search")
-            query = "SELECT * FROM zips WHERE city LIKE '%"+search_term+"%' OR zip LIKE '%"+search_term+"%'"
+            query = "SELECT * FROM zips WHERE LOWER(city) LIKE '%"+search_term.lower()+"%' OR zip LIKE '%"+search_term+"%'"
 
             query_results = db.execute(query)
             db.commit()
             results = []
             for row in query_results:
                 results.append(row)
+            if not results:
+                session['search_error'] = 'No results found'
+                return render_template("index.html")
             print(results)
             return render_template("index.html", results=results)
 
@@ -91,10 +101,73 @@ def location(zipcode):
         results = []
         for row in query_results:
             results.append(row)
-
         results = results[0]
 
-        return render_template("locations.html", results=results)
+        weather = requests.get("https://api.darksky.net/forecast/560a289d9a108079c47564ebf2fbaad0/"+ str(results['lat']) +"," + str(results['long'])).json()
+        data = weather['currently']
+        data['zip'] = results['zip']
+        data['city'] = results['city']
+        data['state'] = results['state']
+        data['lat'] = results['lat']
+        data['long'] = results['long']
+        data['population'] = results['pop']
+        data['checkcount'] = results['checkcount']
+
+        checkin_query_results = db.execute("SELECT * FROM checkins where userid=:u and loc=:z", {"u": session['username'], "z": zipcode})
+        db.commit()
+        checkin_results = []
+        for row in checkin_query_results:
+            checkin_results.append(row)
+
+        if not checkin_results:
+            data['comment'] = ''
+        else:
+            checkin_results = checkin_results[0]
+            data['comment'] = checkin_results['comnts']
+        return render_template("locations.html", results=data)
+
+@app.route("/comment", methods=["POST"])
+def comment():
+    comment = request.form['comment']
+    zipcode = request.form['zipcode']
+
+    location_query = db.execute("UPDATE zips SET checkcount=checkcount+1 where zip=:z", {"z": zipcode})
+    db.commit()
+
+    comment_query = db.execute("INSERT INTO checkins(userid, loc, comnts) VALUES(:u, :l, :c)", {"u": session['username'], "l": zipcode, "c": comment})
+    db.commit()
+    return redirect(url_for("location", zipcode=zipcode))
+@app.route("/api/<zipcode>")
+def api(zipcode):
+    if 'zipcode' == '':
+        return jsonify({"error": "please specify a valid zipcode"})
+    else:
+        query_results = db.execute("SELECT * FROM zips where zip=:z", {"z": zipcode})
+        db.commit()
+
+        results = []
+        for row in query_results:
+            results.append(row)
+
+        if not results:
+            return abort(404)
+        else:
+            results = results[0]
+            data = {}
+            data['zip'] = results['zip']
+            data['city'] = results['city']
+            data['state'] = results['state']
+            data['lat'] = results['lat']
+            data['long'] = results['long']
+            data['population'] = results['pop']
+            return jsonify(data)
+
+@app.route("/logout")
+def logout():
+    session['logged_in'] = False
+    session['username'] = ''
+    return redirect(url_for("index"))
+
 
 @app.route("/nav")
 def nav():

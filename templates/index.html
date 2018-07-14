@@ -2,10 +2,12 @@
 
     {% block content %}
 
-        {% if session['found'] %}
+        {% if session['found'] and session['search_error'] == '' %}
             {% for row in results%}
                 <div> <a href="/location/{{row.zip}}">{{row.city}}, {{row.state}} - {{row.zip}}</a></div>
             {% endfor %}
+        {% else %}
+            <div> {{ session['search_error'] }} </div>
         {% endif %}
 
     {% endblock %}
