@@ -2,36 +2,45 @@
 
 {% block content %}
 
-<p>Location results</p>
-
 {% if results %}
-
-    <div container
-    <div>{{results.zip}}</div>
-    <div>{{results.city}}</div>
-    <div>{{results.state}}</div>
-    <div>{{results.lat}}</div>
-    <div>{{results.long}}</div>
-    <div>{{results.population}}</div>
-    <div>{{results.checkcount}}</div>
-    <div>{{results.time}}</div>
-    <div>{{results.summary}}</div>
-    <div>{{results.temperature}}</div>
-    <div>{{results.dewPoint}}</div>
-    <div>{{results.humidity}}</div>
-
-    <h4>Checkin</h4>
-    {% if show_checkin_form %}
-
-    <form class="my-2 my-lg-0" action="/comment" method="POST">
-        <input type="hidden" name="id" value="{{results.id}}">
-        <div class="form-group">
-            <textarea rows="3" name="comment"></textarea>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col" id="c_info">
+                <h4>Location Information</h4>
+                <h6><span id="cityname">{{results.city}}, {{results.state}}</span></h6>
+                <div>Zip code: {{results.zip}}</div>
+                <div>Latitude: {{results.lat}}</div>
+                <div>Longitude: {{results.long}}</div>
+                <div>Population: {{results.population}}</div>
+            </div>
+            <div class="col" id="w_info">
+                <h4>Current Weather Conditions</h4>
+                <div>Report time: {{results.time}}</div>
+                <div>Conditions: {{results.summary}}</div>
+                <div>Temperature: {{results.temperature}}</div>
+                <div>Dew point: {{results.dewPoint}}</div>
+                <div>Humidity: {{results.humidity}}</div>
+            </div>
         </div>
-        <div class="form-group">
-            <button class="btn btn-outline-success my-2 my-sm-0" type="submit" placeholder="Optional comments">Check-in</button>
+
+        <div class="row" id="checkin">
+            <div class="col-12">
+                <h4>Check in to this location!</h4>
+                <span>Number of check ins: <span>{{results.checkcount}}</span></span>
+                {% if show_checkin_form %}
+
+                <form class="my-2 my-lg-0" action="/comment" method="POST">
+                    <input type="hidden" name="id" value="{{results.id}}">
+                    <div class="form-group">
+                        <textarea rows="3" name="comment"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-outline-success my-2 my-sm-0" type="submit" placeholder="Optional comments">Check-in</button>
+                </div>
+                    </div>
+            </form>
         </div>
-    </form>
+    </div>
     {% endif %}
 
     {% for comment in results.comments %}

@@ -6,6 +6,8 @@ from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+import time
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -13,20 +15,20 @@ from pprint import pprint
 
 app = Flask(__name__)
 
-# Check for environment variable
+# Check for environment variable (source: from class)
 if not os.getenv("DATABASE_URL"):
     raise RuntimeError("DATABASE_URL is not set")
 
-# Configure session to use filesystem
+# Configure session to use filesystem (source: from class)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-# Set up database
+# Set up database (source: from class)
 engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
-
+# Creating the index route.
 @app.route("/")
 def index():
     #return "Project 1: TODO"
@@ -35,15 +37,17 @@ def index():
     session['found'] = False
     return render_template("index.html")
 
-
+# Creating rout
 @app.route("/register", methods=["GET"])
 def register():
     return render_template("register.html")
 
 @app.route("/register", methods=["POST"])
 def post_register():
+    #log user out if logged in
     session['logged_in'] = False
     session['found'] = False
+    #Save new user info to databse
     fname = request.form.get("fname")
     username = request.form.get("username")
     password = request.form.get("password")
@@ -65,6 +69,7 @@ def login():
         #session['error'] = "Username and/or password is incorrect"
         return render_template("loginfail.html")
     else:
+        #Gets user info from database to log in successfuly
         res = result.fetchone()
         session['user_id'] = res.id
         session['logged_in'] = True
@@ -77,6 +82,7 @@ def search():
         session["found"] = False
         session['search_error'] = ''
         session['error'] = ''
+        #Return an error if the user tries to search without logging in
         if not session['logged_in']:
             session["error"] = "Please login to search"
             return render_template("index.html")
@@ -119,8 +125,12 @@ def location(zipcode):
         data['population'] = results['pop']
         data['checkcount'] = results['checkcount']
         data['id'] = results['id']
+        #Format the time (source: https://stackoverflow.com/questions/12400256/converting-epoch-time-into-the-datetime)
+        data['time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(data['time']))
+
 
         checkin_query_results = db.execute("SELECT * FROM checkins WHERE loc=:z", {"z": results['id']})
+        #The following checks if the user has checked in at this location and hides for if they have
         checkin_query_newuser = db.execute("SELECT * FROM checkins WHERE loc=:z AND userid=:u", {"z": results['id'], "u": session['user_id']})
         db.commit()
         if(checkin_query_newuser.rowcount >= 1):
