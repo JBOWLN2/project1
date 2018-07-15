@@ -35,7 +35,7 @@
                             <button type="submit" class="btn btn-primary">Sign in</button>
                         </form>
                         {% else %}
-                        Hi {{session['username']}}
+                        <span>Hi <b>{{session['username']}}</b> welcome to the City Weather and More app!</span>
                         <a href="/logout">Logout</a>
                         {% endif %}
                     </nav>

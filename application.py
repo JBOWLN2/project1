@@ -37,7 +37,7 @@ def index():
     session['found'] = False
     return render_template("index.html")
 
-# Creating rout
+# Creating route
 @app.route("/register", methods=["GET"])
 def register():
     return render_template("register.html")
